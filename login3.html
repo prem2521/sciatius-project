@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Auth System | Login & Registration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+            margin: 0;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .auth-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transform-style: preserve-3d;
+            transition: all 0.5s ease;
+        }
+        
+        .form-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-control {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 12px 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn {
+            background: linear-gradient(90deg, #3a7bd5, #00d2ff);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(0, 210, 255, 0.4);
+        }
+        
+        .toggle-forms {
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-forms:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+        
+        .country-select {
+            border-radius: 8px 0 0 8px;
+            max-width: 120px;
+        }
+        
+        .phone-input {
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .captcha-container {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .captcha-text {
+            letter-spacing: 3px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+            background: #333;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transform: skew(-10deg);
+            user-select: none;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .floating {
+            animation: floating 6s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .auth-container {
+                width: 90%;
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="auth-container w-full max-w-md p-8 mx-auto relative floating">
+            <!-- Login Form -->
+            <div id="login-form">
+                <div class="text-center mb-8">
+                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/88009370-b9d4-4c62-960c-94da590f0674.png" alt="App logo with a modern abstract design featuring gradient blue colors" class="w-24 h-24 mx-auto rounded-full border-4 border-white/20 mb-4">
+                    <h2 class="text-3xl font-bold mb-2">Welcome Back</h2>
+                    <p class="text-white/70">Please login to continue</p>
+                </div>
+                
+                <form id="loginData">
+                    <div class="form-group">
+                        <label for="loginUsername" class="block mb-2">Username or Email</label>
+                        <input type="text" id="loginUsername" class="form-control" placeholder="Enter your username or email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="loginPassword" class="block mb-2">Password</label>
+                        <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required>
+                        <div class="flex justify-end mt-2">
+                            <button type="button" id="showPassword" class="text-xs text-white/60 hover:text-white transition">Show Password</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="captcha-container">
+                            <div class="flex items-center justify-between w-full mb-3">
+                                <div class="captcha-text" id="captchaCode">X7Y9K2</div>
+                                <button type="button" id="refreshCaptcha" class="text-white/70 hover:text-white transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <input type="text" id="captchaInput" class="form-control w-full" placeholder="Enter captcha code" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="rememberMe" class="mr-2">
+                            <label for="rememberMe">Remember me</label>
+                        </div>
+                        <a href="#" class="text-sm text-white/70 hover:text-white transition">Forgot password?</a>
+                    </div>
+                    
+                    <button type="submit" class="btn w-full mt-4 py-3">Login</button>
+                    
+                    <div class="text-center mt-6">
+                        <p class="text-white/70">Don't have an account? <span id="showRegister" class="toggle-forms font-medium">Register here</span></p>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Registration Form (Initially Hidden) -->
+            <div id="register-form" style="display: none;">
+                <div class="text-center mb-8">
+                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/674ffe34-059f-422f-ac27-c724d6c248fa.png" alt="Registration portal icon with a modern sign-up illustration in gradient colors" class="w-24 h-24 mx-auto rounded-full border-4 border-white/20 mb-4">
+                    <h2 class="text-3xl font-bold mb-2">Create Account</h2>
+                    <p class="text-white/70">Join our community today</p>
+                </div>
+                
+                <form id="registerData">
+                    <div class="form-group">
+                        <label for="regName" class="block mb-2">Full Name</label>
+                        <input type="text" id="regName" class="form-control" placeholder="Enter your full name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regUsername" class="block mb-2">Username</label>
+                        <input type="text" id="regUsername" class="form-control" placeholder="Choose a username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regEmail" class="block mb-2">Email Address</label>
+                        <input type="email" id="regEmail" class="form-control" placeholder="Enter your email" required>
+                    </div>
+                    
+                    <div class="form-group grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="regPassword" class="block mb-2">Password</label>
+                            <input type="password" id="regPassword" class="form-control" placeholder="Create password" required>
+                        </div>
+                        <div>
+                            <label for="regConfirmPassword" class="block mb-2">Confirm Password</label>
+                            <input type="password" id="regConfirmPassword" class="form-control" placeholder="Confirm password" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regPhone" class="block mb-2">Mobile Number</label>
+                        <div class="flex">
+                            <select id="countryCode" class="form-control country-select">
+                                <option value="+1">🇺🇸 +1</option>
+                                <option value="+44">🇬🇧 +44</option>
+                                <option value="+91">🇮🇳 +91</option>
+                                <option value="+86">🇨🇳 +86</option>
+                                <option value="+81">🇯🇵 +81</option>
+                                <option value="+49">🇩🇪 +49</option>
+                                <option value="+33">🇫🇷 +33</option>
+                                <!-- More country codes would be added in a real implementation -->
+                            </select>
+                            <input type="tel" id="regPhone" class="form-control phone-input" placeholder="Phone number" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="block mb-2">Location (Auto-detected)</label>
+                        <div class="flex items-center glass-effect px-4 py-3 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white/70 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span id="locationText">Detecting your location...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="termsAgreement" class="mr-2" required>
+                            <label for="termsAgreement">I agree to the <a href="#" class="text-white/70 hover:text-white transition">Terms & Conditions</a> and <a href="#" class="text-white/70 hover:text-white transition">Privacy Policy</a></label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn w-full mt-4 py-3">Create Account</button>
+                    
+                    <div class="text-center mt-6">
+                        <p class="text-white/70">Already have an account? <span id="showLogin" class="toggle-forms font-medium">Login here</span></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Three.js 3D Background
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
+        
+        // Create floating particles
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 500;
+        
+        const posArray = new Float32Array(particlesCount * 3);
+        for(let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 10;
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.02,
+            color: 0x3a7bd5,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+        
+        // Create torus knot
+        const geometry = new THREE.TorusKnotGeometry(1, 0.4, 100, 16);
+        const material = new THREE.MeshBasicMaterial({ 
+            color: 0x00d2ff,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.5
+        });
+        const torusKnot = new THREE.Mesh(geometry, material);
+        scene.add(torusKnot);
+        
+        camera.position.z = 5;
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            torusKnot.rotation.x += 0.005;
+            torusKnot.rotation.y += 0.005;
+            
+            particlesMesh.rotation.x += 0.0005;
+            particlesMesh.rotation.y += 0.0005;
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Form switching functionality
+        document.getElementById('showRegister').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+            
+            // Trigger location detection when showing registration
+            detectLocation();
+        });
+        
+        document.getElementById('showLogin').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+        });
+        
+        // Password visibility toggle
+        document.getElementById('showPassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('loginPassword');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                this.textContent = 'Hide Password';
+            } else {
+                passwordInput.type = 'password';
+                this.textContent = 'Show Password';
+            }
+        });
+        
+        // CAPTCHA functionality
+        function generateCaptcha() {
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let captcha = '';
+            for (let i = 0; i < 6; i++) {
+                captcha += chars[Math.floor(Math.random() * chars.length)];
+            }
+            document.getElementById('captchaCode').textContent = captcha;
+        }
+        
+        document.getElementById('refreshCaptcha').addEventListener('click', generateCaptcha);
+        generateCaptcha(); // Initial captcha generation
+        
+        // Location detection
+        function detectLocation() {
+            const locationText = document.getElementById('locationText');
+            
+            if (!navigator.geolocation) {
+                locationText.textContent = 'Geolocation not supported by your browser';
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    // In a real app, you would reverse geocode these coordinates
+                    const latitude = position.coords.latitude.toFixed(4);
+                    const longitude = position.coords.longitude.toFixed(4);
+                    locationText.textContent = `Approximate location: ${latitude}, ${longitude}`;
+                },
+                (error) => {
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            locationText.textContent = 'Location access denied. Please enable it in your browser settings.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            locationText.textContent = 'Location information unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            locationText.textContent = 'The request to get location timed out.';
+                            break;
+                        default:
+                            locationText.textContent = 'Unable to determine your location.';
+                    }
+                }
+            );
+        }
+        
+        // Form validation and submission
+        document.getElementById('loginData').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const captchaInput = document.getElementById('captchaInput').value;
+            const captchaCode = document.getElementById('captchaCode').textContent;
+            
+            if (captchaInput !== captchaCode) {
+                alert('Invalid CAPTCHA code. Please try again.');
+                generateCaptcha();
+                return;
+            }
+            
+            // In a real app, you would send login data to server here
+            alert('Login successful! (Demo only)');
+            this.reset();
+            generateCaptcha();
+        });
+        
+        document.getElementById('registerData').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+            
+            if (!document.getElementById('termsAgreement').checked) {
+                alert('You must agree to the terms and conditions!');
+                return;
+            }
+            
+            // In a real app, you would send registration data to server here
+            alert('Registration successful! Welcome to our platform. (Demo only)');
+            this.reset();
+            
+            // Switch back to login form
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scaitius Research - Admin Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Montserrat:wght@300;400;600&display=swap');
+        
+        :root {
+            --primary: #3a86ff;
+            --secondary: #8338ec;
+            --dark: #212529;
+            --light: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
+            margin: 0;
+            overflow-x: hidden;
+        }
+        
+        h1, h2, h3 {
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        #hero-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .glow {
+            text-shadow: 0 0 10px rgba(58, 134, 255, 0.7);
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(58, 134, 255, 0.2);
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(58, 134, 255, 0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(58, 134, 255, 0.4);
+        }
+        
+        .captcha {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 5px;
+            user-select: none;
+        }
+        
+        .dashboard-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .dashboard-card-content {
+            flex-grow: 1;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+        
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            transition: all 0.3s ease;
+        }
+        
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .alert {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(58, 134, 255, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(58, 134, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(58, 134, 255, 0); }
+        }
+        
+        .floating {
+            animation: floating 6s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="hero-canvas"></canvas>
+    
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div id="auth-container" class="w-full max-w-md">
+            <div id="register-section" class="card p-8 mb-6">
+                <div class="text-center mb-8">
+                    <div class="floating inline-block">
+                        <img src="company_logo.webp" alt="Scaitius Research logo - 3D atom icon with glowing particles" class="rounded-full w-24 h-24 object-cover mx-auto mb-4">
+                    </div>
+                    <h1 class="text-3xl font-bold mb-2 glow">Scaitius Research</h1>
+                    <p class="text-gray-400">Admin Portal Registration</p>
+                </div>
+                
+                <form id="register-form">
+                    <div class="mb-4">
+                        <label for="username" class="block mb-2 text-sm">Username</label>
+                        <input type="text" id="username" class="w-full px-4 py-2 rounded input-field" placeholder="Enter your username" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="email" class="block mb-2 text-sm">Email</label>
+                        <input type="email" id="email" class="w-full px-4 py-2 rounded input-field" placeholder="Enter your email" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="location" class="block mb-2 text-sm">Location</label>
+                        <input type="text" id="location" class="w-full px-4 py-2 rounded input-field" placeholder="Enter your location" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="password" class="block mb-2 text-sm">Password</label>
+                        <input type="password" id="password" class="w-full px-4 py-2 rounded input-field" placeholder="Enter your password" required>
+                        <div class="progress-bar mt-2">
+                            <div id="password-strength" class="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <p id="password-hint" class="text-xs mt-1 text-gray-400">Password strength</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="captcha" class="block mb-2 text-sm">Captcha</label>
+                        <div class="flex items-center mb-2">
+                            <div id="captcha-text" class="captcha bg-gray-800 px-4 py-2 rounded text-lg"></div>
+                            <button type="button" id="refresh-captcha" class="ml-2 text-gray-400 hover:text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                        <input type="text" id="captcha" class="w-full px-4 py-2 rounded input-field" placeholder="Enter captcha" required>
+                    </div>
+                    
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="remember" class="mr-2 rounded input-field">
+                            <label for="remember" class="text-sm">Remember me</label>
+                        </div>
+                        
+                        <button type="button" id="switch-to-login" class="text-sm text-gray-400 hover:text-white">Already registered? Login</button>
+                    </div>
+                    
+                    <button type="submit" class="w-full py-2 rounded btn-primary font-medium">Register</button>
+                </form>
+            </div>
+            
+            <div id="login-section" class="card p-8 mb-6 hidden">
+                <div class="text-center mb-8">
+                    <div class="floating inline-block">
+                        <img src="company_logo.webp" alt="Scaitius Research logo - 3D atom icon with glowing particles" class="rounded-full w-24 h-24 object-cover mx-auto mb-4">
+                    </div>
+                    <h1 class="text-3xl font-bold mb-2 glow">Scaitius Research</h1>
+                    <p class="text-gray-400">Admin Portal Login</p>
+                </div>
+                
+                <form id="login-form">
+                    <div class="mb-4">
+                        <label for="login-username" class="block mb-2 text-sm">Username</label>
+                        <input type="text" id="login-username" class="w-full px-4 py-2 rounded input-field" placeholder="Enter your username" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="login-password" class="block mb-2 text-sm">Password</label>
+                        <input type="password" id="login-password" class="w-full px-4 py-2 rounded input-field" placeholder="Enter your password" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="login-captcha" class="block mb-2 text-sm">Captcha</label>
+                        <div class="flex items-center mb-2">
+                            <div id="login-captcha-text" class="captcha bg-gray-800 px-4 py-2 rounded text-lg"></div>
+                            <button type="button" id="refresh-login-captcha" class="ml-2 text-gray-400 hover:text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                        <input type="text" id="login-captcha" class="w-full px-4 py-2 rounded input-field" placeholder="Enter captcha" required>
+                    </div>
+                    
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="login-remember" class="mr-2 rounded input-field">
+                            <label for="login-remember" class="text-sm">Remember me</label>
+                        </div>
+                        
+                        <button type="button" id="switch-to-register" class="text-sm text-gray-400 hover:text-white">New user? Register</button>
+                    </div>
+                    
+                    <button type="submit" class="w-full py-2 rounded btn-primary font-medium">Login</button>
+                </form>
+            </div>
+            
+            <div id="alert" class="alert hidden"></div>
+        </div>
+    </div>
+    
+    <div id="dashboard" class="hidden">
+        <div class="sidebar bg-gray-900">
+            <div class="p-6 flex items-center border-b border-gray-800">
+                <img src="company_logo.webp" alt="Scaitius Research Admin - Profile Picture" class="rounded-full w-10 h-10 object-cover mr-3">
+                <div>
+                    <h4 class="font-medium" id="logged-in-user">Admin</h4>
+                    <p class="text-xs text-gray-400">Admin Dashboard</p>
+                </div>
+            </div>
+            
+            <nav class="p-4">
+                <ul>
+                    <li class="mb-2">
+                        <a href="#" class="flex items-center p-2 rounded hover:bg-gray-800 active-nav">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                            </svg>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="flex items-center p-2 rounded hover:bg-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd" />
+                            </svg>
+                            Users
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="flex items-center p-2 rounded hover:bg-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M11.17 4.5A2.5 2.5 0 0112 6H5.5a2.5 2.5 0 100 5H10v1.5a2.5 2.5 0 105 0V8.83a3.5 3.5 0 10-2-6.33zM13.5 6a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0zm-8 5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm8-2a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clip-rule="evenodd" />
+                            </svg>
+                            Analytics
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="flex items-center p-2 rounded hover:bg-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-2 0c0 .993-.241 1.929-.668 2.754l-1.524-1.525a3.997 3.997 0 00.078-2.183l1.562-1.562C15.802 8.288 16 9.096 16 10zm-5.165 3.913l1.58 1.58A5.98 5.98 0 0110 16a5.976 5.976 0 01-2.516-.552l1.562-1.562a4.006 4.006 0 001.789.027zm-4.677-2.796a4.002 4.002 0 01-.041-2.08l-.08.08-1.53-1.533A5.98 5.98 0 004 10c0 .954.185 1.862.513 2.69l.787-.787.787-.787zm3.633.804a3.96 3.96 0 01-1.171-.882l-.87.87a5.96 5.96 0 001.63-1.163l1.579 1.58a3.95 3.95 0 01-1.168.883l-.001-.001zm-5.7.915l.85-.85A5.978 5.978 0 014 10c0-.954.185-1.862.513-2.69l-.787.787.352.353.844.844.001-.001z" clip-rule="evenodd" />
+                            </svg>
+                            Research Data
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="flex items-center p-2 rounded hover:bg-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                            </svg>
+                            Notifications
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="flex items-center p-2 rounded hover:bg-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                            </svg>
+                            Settings
+                        </a>
+                    </li>
+                    <li class="mt-6 border-t border-gray-800 pt-4">
+                        <a href="#" id="logout" class="flex items-center p-2 rounded hover:bg-gray-800 text-red-400 hover:text-red-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd" />
+                            </svg>
+                            Logout
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        
+        <div class="main-content">
+            <header class="bg-gray-900 border-b border-gray-800 p-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold">Dashboard</h2>
+                <div class="flex items-center">
+                    <div class="relative mr-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                        </svg>
+                        <input type="text" placeholder="Search..." class="bg-gray-800 px-4 pl-10 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="relative mr-2">
+                        <button class="bg-gray-800 p-2 rounded-full hover:bg-gray-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                            </svg>
+                        </button>
+                        <span class="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500"></span>
+                    </div>
+                    <button class="bg-gray-800 p-2 rounded-full hover:bg-gray-700 flex items-center">
+                        <img src="company_logo.webp" alt="Admin Profile Icon" class="rounded-full w-8 h-8 object-cover">
+                    </button>
+                </div>
+            </header>
+            
+            <main class="p-6">
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Welcome, <span id="dashboard-username" class="text-blue-400"></span></h3>
+                    <div class="card p-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="text-lg font-medium">Scaitius Research Portal</h4>
+                                <p class="text-gray-400 text-sm">Your session started at: <span id="login-time" class="text-white"></span></p>
+                            </div>
+                            <button id="download-pdf" class="btn-primary px-4 py-2 rounded flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                                Export PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="card p-6 dashboard-card pulse">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="text-gray-400 text-sm mb-1">Active Researchers</h4>
+                                <p class="text-2xl font-bold">24</p>
+                            </div>
+                            <div class="bg-blue-500/10 p-2 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 13a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" style="width: 65%"></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">+12% from last month</p>
+                    </div>
+                    
+                    <div class="card p-6 dashboard-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="text-gray-400 text-sm mb-1">Active Projects</h4>
+                                <p class="text-2xl font-bold">18</p>
+                            </div>
+                            <div class="bg-purple-500/10 p-2 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                    <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" style="width: 78%"></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">+8% from last month</p>
+                    </div>
+                    
+                    <div class="card p-6 dashboard-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="text-gray-400 text-sm mb-1">Research Papers</h4>
+                                <p class="text-2xl font-bold">42</p>
+                            </div>
+                            <div class="bg-green-500/10 p-2 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" style="width: 52%"></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">+5% from last month</p>
+                    </div>
+                    
+                    <div class="card p-6 dashboard-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="text-gray-400 text-sm mb-1">Active Experiments</h4>
+                                <p class="text-2xl font-bold">36</p>
+                            </div>
+                            <div class="bg-yellow-500/10 p-2 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" style="width: 45%"></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">+3% from last month</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="card p-6 lg:col-span-2 dashboard-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-medium">Recent Research Activities</h4>
+                            <select class="bg-gray-800 px-3 py-1 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option>Last 7 days</option>
+                                <option>Last 30 days</option>
+                                <option>Last 90 days</option>
+                            </select>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-800">
+                                        <th class="text-left py-2 text-sm text-gray-400">Project</th>
+                                        <th class="text-left py-2 text-sm text-gray-400">Status</th>
+                                        <th class="text-left py-2 text-sm text-gray-400">Last Updated</th>
+                                        <th class="text-left py-2 text-sm text-gray-400">Progress</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-gray-800">
+                                        <td class="py-3">
+                                            <div class="flex items-center">
+                                                <div class="bg-blue-500/10 p-2 rounded-full mr-3">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.46v4.915a1 1 0 00-1.555.832L2 17a1 1 0 002 0 1 1 0 00.57-.933V10.46l1.69-1.063a1 1 0 10-1.838-.788l-2 1a1 1 0 00-.052.02l-1.077.432a1 1 0 00-.003.784l.007.022a1 1 0 00.57.661l1.069.433-.124.049a1 1 0 001.784-.617l-.912-3.638 3.139-1.547-1.139-4.17a1 1 0 00-.003-.784l-1.069-.432.052-.02z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h5 class="font-medium">Quantum Computing</h5>
+                                                    <p class="text-xs text-gray-400">Dr. Smith Parker</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3">
+                                            <span class="bg-green-500/10 text-green-500 px-2 py-1 rounded-full text-xs">Active</span>
+                                        </td>
+                                        <td class="py-3 text-sm text-gray-400">2 hours ago</td>
+                                        <td class="py-3">
+                                            <div class="progress-bar">
+                                                <div class="progress-bar-fill" style="width: 78%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-gray-800">
+                                        <td class="py-3">
+                                            <div class="flex items-center">
+                                                <div class="bg-purple-500/10 p-2 rounded-full mr-3">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h5 class="font-medium">Nanotechnology</h5>
+                                                    <p class="text-xs text-gray-400">Dr. Emily Johnson</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3">
+                                            <span class="bg-blue-500/10 text-blue-500 px-2 py-1 rounded-full text-xs">In Progress</span>
+                                        </td>
+                                        <td class="py-3 text-sm text-gray-400">Yesterday</td>
+                                        <td class="py-3">
+                                            <div class="progress-bar">
+                                                <div class="progress-bar-fill" style="width: 45%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-gray-800">
+                                        <td class="py-3">
+                                            <div class="flex items-center">
+                                                <div class="bg-yellow-500/10 p-2 rounded-full mr-3">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h5 class="font-medium">AI Research</h5>
+                                                    <p class="text-xs text-gray-400">Dr. Mark Chen</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3">
+                                            <span class="bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded-full text-xs">Pending</span>
+                                        </td>
+                                        <td class="py-3 text-sm text-gray-400">3 days ago</td>
+                                        <td class="py-3">
+                                            <div class="progress-bar">
+                                                <div class="progress-bar-fill" style="width: 22%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-3">
+                                            <div class="flex items-center">
+                                                <div class="bg-red-500/10 p-2 rounded-full mr-3">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h5 class="font-medium">Biotech</h5>
+                                                    <p class="text-xs text-gray-400">Dr. Sarah Williams</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3">
+                                            <span class="bg-red-500/10 text-red-500 px-2 py-1 rounded-full text-xs">On Hold</span>
+                                        </td>
+                                        <td class="py-3 text-sm text-gray-400">1 week ago</td>
+                                        <td class="py-3">
+                                            <div class="progress-bar">
+                                                <div class="progress-bar-fill" style="width: 15%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="card p-6 dashboard-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-medium">Upcoming Events</h4>
+                            <button class="text-sm text-blue-500 hover:text-blue-400">View All</button>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <div class="bg-blue-500/10 p-2 rounded-full mr-3 mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium">Research Symposium</h5>
+                                    <p class="text-sm text-gray-400">Tomorrow • 10:00 AM</p>
+                                    <p class="text-xs mt-1">Annual research symposium with keynote speakers</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-purple-500/10 p-2 rounded-full mr-3 mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium">Project Deadline</h5>
+                                    <p class="text-sm text-gray-400">Dec 15 • 5:00 PM</p>
+                                    <p class="text-xs mt-1">Phase 1 submission for quantum computing project</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-green-500/10 p-2 rounded-full mr-3 mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium">Team Meeting</h5>
+                                    <p class="text-sm text-gray-400">Dec 20 • 11:00 AM</p>
+                                    <p class="text-xs mt-1">Monthly all-hands team meeting</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-yellow-500/10 p-2 rounded-full mr-3 mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium">System Maintenance</h5>
+                                    <p class="text-sm text-gray-400">Dec 22 • 8:00 PM</p>
+                                    <p class="text-xs mt-1">Planned server maintenance (2hr downtime)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card p-6 dashboard-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-medium">Recent Logins</h4>
+                        <button class="text-sm text-blue-500 hover:text-blue-400">View All</button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-800">
+                                    <th class="text-left py-2 text-sm text-gray-400">Time</th>
+                                    <th class="text-left py-2 text-sm text-gray-400">IP Address</th>
+                                    <th class="text-left py-2 text-sm text-gray-400">Device</th>
+                                    <th class="text-left py-2 text-sm text-gray-400">Location</th>
+                                </tr>
+                            </thead>
+                            <tbody id="login-history">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script>
+        // Generate random captcha
+        function generateCaptcha() {
+            const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            let captcha = "";
+            for (let i = 0; i < 6; i++) {
+                captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return captcha;
+        }
+        
+        // Initialize 3D scene
+        function init3DScene() {
+            const canvas = document.getElementById('hero-canvas');
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+            
+            // Create particles
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 5000;
+            const posArray = new Float32Array(particlesCount * 3);
+            
+            for (let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 200;
+            }
+            
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.05,
+                color: 0x3a86ff,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+            
+            // Create floating atoms
+            const atomGroup = new THREE.Group();
+            
+            const createAtom = (color, radius, position) => {
+                const geometry = new THREE.SphereGeometry(radius, 32, 32);
+                const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 });
+                const sphere = new THREE.Mesh(geometry, material);
+                sphere.position.set(position.x, position.y, position.z);
+                
+                const ringGeometry = new THREE.RingGeometry(radius * 1.5, radius * 1.6, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.3 });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2;
+                
+                const atom = new THREE.Group();
+                atom.add(sphere);
+                atom.add(ring);
+                
+                return atom;
+            };
+            
+            const atom1 = createAtom(0x3a86ff, 3, { x: 10, y: 0, z: 0 });
+            const atom2 = createAtom(0x8338ec, 2, { x: -10, y: 5, z: 5 });
+            const atom3 = createAtom(0x00b4d8, 2.5, { x: 5, y: -5, z: -5 });
+            
+            atomGroup.add(atom1);
+            atomGroup.add(atom2);
+            atomGroup.add(atom3);
+            scene.add(atomGroup);
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                particlesMesh.rotation.x += 0.0005;
+                particlesMesh.rotation.y += 0.0005;
+                
+                atomGroup.rotation.x += 0.002;
+                atomGroup.rotation.y += 0.003;
+                
+                atom1.rotation.z += 0.01;
+                atom2.rotation.x += 0.02;
+                atom3.rotation.y += 0.015;
+                
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize 3D scene
+            init3DScene();
+            
+            // Generate captchas
+            const captchaText = document.getElementById('captcha-text');
+            const loginCaptchaText = document.getElementById('login-captcha-text');
+            let currentCaptcha = generateCaptcha();
+            let loginCurrentCaptcha = generateCaptcha();
+            
+            captchaText.textContent = currentCaptcha;
+            loginCaptchaText.textContent = loginCurrentCaptcha;
+            
+            // Refresh captcha buttons
+            document.getElementById('refresh-captcha').addEventListener('click', () => {
+                currentCaptcha = generateCaptcha();
+                captchaText.textContent = currentCaptcha;
+                document.getElementById('captcha').value = '';
+            });
+            
+            document.getElementById('refresh-login-captcha').addEventListener('click', () => {
+                loginCurrentCaptcha = generateCaptcha();
+                loginCaptchaText.textContent = loginCurrentCaptcha;
+                document.getElementById('login-captcha').value = '';
+            });
+            
+            // Switch between login and register forms
+            document.getElementById('switch-to-login').addEventListener('click', () => {
+                document.getElementById('register-section').classList.add('hidden');
+                document.getElementById('login-section').classList.remove('hidden');
+            });
+            
+            document.getElementById('switch-to-register').addEventListener('click', () => {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('register-section').classList.remove('hidden');
+            });
+            
+            // Password strength indicator
+            document.getElementById('password').addEventListener('input', (e) => {
+                const password = e.target.value;
+                let strength = 0;
+                
+                // Length check
+                if (password.length >= 8) strength += 25;
+                
+                // Character diversity checks
+                if (/[A-Z]/.test(password)) strength += 25;
+                if (/[0-9]/.test(password)) strength += 25;
+                if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+                
+                document.getElementById('password-strength').style.width = strength + '%';
+                
+                let hint = '';
+                if (strength < 25) hint = 'Very weak';
+                else if (strength < 50) hint = 'Weak';
+                else if (strength < 75) hint = 'Good';
+                else hint = 'Strong';
+                
+                document.getElementById('password-hint').textContent = hint;
+            });
+            
+            // Form submission handlers
+            document.getElementById('register-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value;
+                const email = document.getElementById('email').value;
+                const location = document.getElementById('location').value;
+                const password = document.getElementById('password').value;
+                const captchaInput = document.getElementById('captcha').value;
+                
+                if (captchaInput !== currentCaptcha) {
+                    showAlert('Invalid captcha. Please try again.', 'error');
+                    currentCaptcha = generateCaptcha();
+                    document.getElementById('captcha-text').textContent = currentCaptcha;
+                    document.getElementById('captcha').value = '';
+                    return;
+                }
+                
+                // In a real application, you would send this data to your backend
+                localStorage.setItem('scaitius_username', username);
+                localStorage.setItem('scaitius_email', email);
+                localStorage.setItem('scaitius_location', location);
+                
+                showAlert('Registration successful! Please login.', 'success');
+                document.getElementById('register-section').classList.add('hidden');
+                document.getElementById('login-section').classList.remove('hidden');
+            });
+            
+            document.getElementById('login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const username = document.getElementById('login-username').value;
+                const password = document.getElementById('login-password').value;
+                const captchaInput = document.getElementById('login-captcha').value;
+                
+                if (captchaInput !== loginCurrentCaptcha) {
+                    showAlert('Invalid captcha. Please try again.', 'error');
+                    loginCurrentCaptcha = generateCaptcha();
+                    document.getElementById('login-captcha-text').textContent = loginCurrentCaptcha;
+                    document.getElementById('login-captcha').value = '';
+                    return;
+                }
+                
+                // In a real application, you would verify credentials with your backend
+                // For this demo, we'll just check if the username exists in localStorage
+                const registeredUsername = localStorage.getItem('scaitius_username');
+                if (!registeredUsername || username !== registeredUsername) {
+                    showAlert('Invalid username or password', 'error');
+                    return;
+                }
+                
+                // Store login session
+                const loginTime = new Date();
+                localStorage.setItem('scaitius_last_login', loginTime.toString());
+                
+                // Add to login history
+                const loginHistory = JSON.parse(localStorage.getItem('scaitius_login_history') || '[]');
+                loginHistory.unshift({
+                    time: loginTime.toString(),
+                    ip: generateRandomIP(),
+                    device: getRandomDevice(),
+                    location: localStorage.getItem('scaitius_location') || 'Unknown'
+                });
+                localStorage.setItem('scaitius_login_history', JSON.stringify(loginHistory.slice(0, 10)));
+                
+                // Show dashboard
+                document.getElementById('auth-container').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                
+                // Display user info
+                document.getElementById('logged-in-user').textContent = username;
+                document.getElementById('dashboard-username').textContent = username;
+                document.getElementById('login-time').textContent = loginTime.toLocaleString();
+                
+                // Populate login history
+                updateLoginHistory();
+            });
+            
+            // Logout button
+            document.getElementById('logout').addEventListener('click', () => {
+                document.getElementById('dashboard').classList.add('hidden');
+                document.getElementById('auth-container').classList.remove('hidden');
+                
+                // Reset login form
+                loginCurrentCaptcha = generateCaptcha();
+                document.getElementById('login-captcha-text').textContent = loginCurrentCaptcha;
+                document.getElementById('login-captcha').value = '';
+                document.getElementById('login-username').value = '';
+                document.getElementById('login-password').value = '';
+                
+                // Show login section by default
+                document.getElementById('register-section').classList.add('hidden');
+                document.getElementById('login-section').classList.remove('hidden');
+                
+                showAlert('You have been logged out.', 'info');
+            });
+            
+            // PDF export button
+            document.getElementById('download-pdf').addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                const title = "Scaitius Research Portal - Dashboard Report";
+                const user = localStorage.getItem('scaitius_username') || "Guest";
+                const loginTime = localStorage.getItem('scaitius_last_login') || new Date().toString();
+                
+                // Add title
+                doc.setFontSize(20);
+                doc.text(title, 105, 20, { align: 'center' });
+                
+                // Add user info
+                doc.setFontSize(12);
+                doc.text(`Generated for: ${user}`, 20, 40);
+                doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 50);
+                doc.text(`Session started: ${new Date(loginTime).toLocaleString()}`, 20, 60);
+                
+                // Add a separator
+                doc.setDrawColor(58, 134, 255);
+                doc.line(20, 70, 190, 70);
+                
+                // Add some dashboard highlights
+                doc.setFontSize(16);
+                doc.text('Research Overview', 20, 90);
+                
+                doc.setFontSize(12);
+                doc.text('• Active Researchers: 24', 20, 100);
+                doc.text('• Active Projects: 18', 20, 110);
+                doc.text('• Research Papers: 42', 20, 120);
+                
+                // Add another separator
+                doc.line(20, 130, 190, 130);
+                
+                // Add recent logins
+                doc.setFontSize(16);
+                doc.text('Recent Logins', 20, 150);
+                
+                doc.setFontSize(10);
+                const loginHistory = JSON.parse(localStorage.getItem('scaitius_login_history') || '[]');
+                
+                let yPos = 160;
+                loginHistory.forEach(login => {
+                    doc.text(`• ${new Date(login.time).toLocaleString()} - ${login.device} (${login.ip})`, 20, yPos);
+                    yPos += 7;
+                });
+                
+                // Save the PDF
+                doc.save(`ScaitiusReport-${user}-${new Date().toISOString().split('T')[0]}.pdf`);
+            });
+            
+            // Helper functions
+            function showAlert(message, type) {
+                const alertEl = document.getElementById('alert');
+                alertEl.textContent = message;
+                alertEl.className = `alert ${type} p-4 rounded mb-4`;
+                
+                setTimeout(() => {
+                    alertEl.classList.add('hidden');
+                }, 5000);
+            }
+            
+            function generateRandomIP() {
+                return `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+            }
+            
+            function getRandomDevice() {
+                const devices = [
+                    'Windows Desktop',
+                    'MacBook Pro',
+                    'iPhone 13',
+                    'Samsung Galaxy S22',
+                    'Linux Workstation',
+                    'iPad Pro'
+                ];
+                return devices[Math.floor(Math.random() * devices.length)];
+            }
+            
+            function updateLoginHistory() {
+                const loginHistory = JSON.parse(localStorage.getItem('scaitius_login_history') || '[]');
+                const historyEl = document.getElementById('login-history');
+                historyEl.innerHTML = '';
+                
+                loginHistory.forEach(login => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-800';
+                    
+                    const timeCell = document.createElement('td');
+                    timeCell.className = 'py-3';
+                    timeCell.textContent = new Date(login.time).toLocaleString();
+                    
+                    const ipCell = document.createElement('td');
+                    ipCell.className = 'py-3';
+                    ipCell.textContent = login.ip;
+                    
+                    const deviceCell = document.createElement('td');
+                    deviceCell.className = 'py-3';
+                    deviceCell.textContent = login.device;
+                    
+                    const locationCell = document.createElement('td');
+                    locationCell.className = 'py-3';
+                    locationCell.textContent = login.location;
+                    
+                    row.appendChild(timeCell);
+                    row.appendChild(ipCell);
+                    row.appendChild(deviceCell);
+                    row.appendChild(locationCell);
+                    
+                    historyEl.appendChild(row);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
